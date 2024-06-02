@@ -23,7 +23,15 @@ const client = new MongoClient(uri, {
     try {
         const mealCollection = client.db('dormMasterDB').collection('meals');
 
-        app.get('/meals', async(req,res)=>{
+        //meal related api
+
+        app.post('/meal', async(req,res)=>{
+            const item = req.body;
+            const result = await mealCollection.insertOne(item);
+            res.send(result);
+        })
+
+        app.get('/meal', async(req,res)=>{
             const result = await mealCollection.find().toArray();
             res.send(result);
         })
