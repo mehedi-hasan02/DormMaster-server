@@ -29,10 +29,17 @@ const client = new MongoClient(uri, {
             const item = req.body;
             const result = await mealCollection.insertOne(item);
             res.send(result);
-        })
+        });
 
         app.get('/meal', async(req,res)=>{
             const result = await mealCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.get('/meal/:id', async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)};
+            const result = await mealCollection.findOne(query);
             res.send(result);
         })
       
