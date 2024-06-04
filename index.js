@@ -23,6 +23,7 @@ async function run() {
   try {
     const mealCollection = client.db('dormMasterDB').collection('meals');
     const upcomingMealCollection = client.db('dormMasterDB').collection('upcomingMeals');
+    const requestMealCollection = client.db('dormMasterDB').collection('requestMeals');
     const reviewCollection = client.db('dormMasterDB').collection('reviews');
 
     //meal related api
@@ -73,6 +74,11 @@ async function run() {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.send(result);
+    });
+
+    app.get('/reviews', async(req,res)=>{
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
     })
 
     app.get('/review/:id', async (req, res) => {
@@ -88,6 +94,18 @@ async function run() {
       const result = await upcomingMealCollection.insertOne(item);
       res.send(result);
     });
+
+    app.get('/upcomingMeal', async(req,res)=>{
+      const result = await upcomingMealCollection.find().toArray();
+      res.send(result);
+    });
+
+    //meal request related api
+    app.post('/mealRequest', async(req,res)=>{
+      const item = req.body;
+      const result = await requestMealCollection.insertOne(item);
+      res.send(result);
+    })
 
 
 
