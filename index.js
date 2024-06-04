@@ -22,6 +22,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const mealCollection = client.db('dormMasterDB').collection('meals');
+    const upcomingMealCollection = client.db('dormMasterDB').collection('upcomingMeals');
     const reviewCollection = client.db('dormMasterDB').collection('reviews');
 
     //meal related api
@@ -79,7 +80,14 @@ async function run() {
       const filter = { mealId: id };
       const result = await reviewCollection.find(filter).toArray();
       res.send(result);
-    })
+    });
+
+    //upcoming meal related api
+    app.post('/upcomingMeal', async(req,res)=>{
+      const item = req.body;
+      const result = await upcomingMealCollection.insertOne(item);
+      res.send(result);
+    });
 
 
 
