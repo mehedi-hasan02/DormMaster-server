@@ -25,6 +25,7 @@ async function run() {
     const upcomingMealCollection = client.db('dormMasterDB').collection('upcomingMeals');
     const requestMealCollection = client.db('dormMasterDB').collection('requestMeals');
     const reviewCollection = client.db('dormMasterDB').collection('reviews');
+    const userCollection = client.db('dormMasterDB').collection('users');
 
     //meal related api
 
@@ -76,7 +77,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/reviews', async(req,res)=>{
+    app.get('/reviews', async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     })
@@ -89,23 +90,83 @@ async function run() {
     });
 
     //upcoming meal related api
-    app.post('/upcomingMeal', async(req,res)=>{
+    app.post('/upcomingMeal', async (req, res) => {
       const item = req.body;
       const result = await upcomingMealCollection.insertOne(item);
       res.send(result);
     });
 
-    app.get('/upcomingMeal', async(req,res)=>{
+    app.get('/upcomingMeal', async (req, res) => {
       const result = await upcomingMealCollection.find().toArray();
       res.send(result);
     });
 
     //meal request related api
-    app.post('/mealRequest', async(req,res)=>{
+    app.post('/mealRequest', async (req, res) => {
       const item = req.body;
       const result = await requestMealCollection.insertOne(item);
       res.send(result);
-    })
+    });
+
+    app.get('/mealRequest', async (req, res) => {
+      const result = await requestMealCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch('/mealRequest/:id', async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: {
+          status: data.status
+        }
+      }
+
+      const result = await requestMealCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+
+    //user related api
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exit', insertedId: null })
+      }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get('/users', async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: {
+          role: 'admin',
+        }
+      }
+
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.delete('/users/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+
+      const result = await userCollection.deleteOne(filter);
+      res.send(result);
+    });
 
 
 
