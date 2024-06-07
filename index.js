@@ -1,13 +1,20 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const port = process.env.PORT || 8000;
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://magenta-semifreddo-dd33c1.netlify.app'
+  ]
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.fvwg0tw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -136,6 +143,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/mealRequest/:email', async(req,res)=>{
+      const email = req.params.email;
+      const filter = {userEmail:email};
+      const result = await requestMealCollection.find(filter).toArray();
+      res.send(result);
+    })
+
     app.patch('/mealRequest/:id', async (req, res) => {
       const id = req.params.id;
       const data = req.body;
@@ -150,6 +164,8 @@ async function run() {
       const result = await requestMealCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+
+    
 
 
     //user related api
@@ -166,6 +182,13 @@ async function run() {
 
     app.get('/users', async (req, res) => {
       const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get('/users/:email', async(req,res)=>{
+      const email = req.params.email;
+      const filter = {email:email};
+      const result = await userCollection.findOne(filter);
       res.send(result);
     });
 
