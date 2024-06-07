@@ -40,12 +40,21 @@ async function run() {
       res.send(result);
     });
 
+    // app.get('/meal/:email', async (req, res) => {
+    //   const adminEmail = req.params.email;
+    //   const filter = { adminEmail: adminEmail };
+    //   const result = await mealCollection.find(filter).toArray();
+    //   res.send(result);
+    // });
+
     app.get('/meal/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await mealCollection.findOne(query);
       res.send(result);
     });
+
+
 
     app.patch('/meal/:id', async (req, res) => {
       const item = req.body;
@@ -98,6 +107,20 @@ async function run() {
 
     app.get('/upcomingMeal', async (req, res) => {
       const result = await upcomingMealCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get('/upcomingMeal/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id:  new ObjectId(id)};
+      const result = await upcomingMealCollection.findOne(filter);
+      res.send(result);
+    });
+
+    app.delete('/upcomingMeal/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await upcomingMealCollection.deleteOne(filter);
       res.send(result);
     });
 
@@ -160,9 +183,9 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/users/:id', async(req,res)=>{
+    app.delete('/users/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
 
       const result = await userCollection.deleteOne(filter);
       res.send(result);
