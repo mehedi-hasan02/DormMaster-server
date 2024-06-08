@@ -77,12 +77,45 @@ async function run() {
           price: item.price,
           ingredients: item.ingredients,
           rating: item.rating,
+          review: item.review,
           like: item.like,
           description: item.description
         }
+        }
+    if(item.review)
+      {
+        updateDoc.$inc = {review:1};
       }
 
       const result = await mealCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.patch('/reviewCount/:id',async(req,res)=>{
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      let count = { $inc : { review : 1}};
+      
+      const result = await mealCollection.updateOne(filter, count);
+      res.send(result);
+      
+    });
+
+    app.patch('/likeCount/:id',async(req,res)=>{
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      let count = { $inc : { like : 1}};
+      
+      const result = await mealCollection.updateOne(filter, count);
+      res.send(result);
+    })
+
+    app.delete('/meal/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await mealCollection.deleteOne(filter);
       res.send(result);
     });
 
@@ -93,6 +126,22 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/review/:id', async(req,res)=>{
+      const data = req.body;
+      console.log(data);
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+
+      const updateDoc = {
+        $set: {
+          review: data.review
+        }
+      }
+
+      const result = await reviewCollection.updateOne(filter,updateDoc);
+      req.send(result);
+    })
+
     app.get('/reviews', async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
@@ -102,6 +151,13 @@ async function run() {
       const id = req.params.id;
       const filter = { mealId: id };
       const result = await reviewCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.delete('/review/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await reviewCollection.deleteOne(filter);
       res.send(result);
     });
 
@@ -165,7 +221,12 @@ async function run() {
       res.send(result);
     });
 
-    
+    app.delete('/mealRequest/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const result = await requestMealCollection.deleteOne(filter);
+      res.send(result);
+    });
 
 
     //user related api
@@ -188,8 +249,13 @@ async function run() {
     app.get('/users/:email', async(req,res)=>{
       const email = req.params.email;
       const filter = {email:email};
-      const result = await userCollection.findOne(filter);
-      res.send(result);
+      const user = await userCollection.findOne(filter);
+      let admin = false;
+
+      if (user) {
+        admin = user?.role === 'admin'
+      }
+      res.send({admin});
     });
 
     app.patch('/users/admin/:id', async (req, res) => {
