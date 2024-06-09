@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, serialize } = require('mongodb');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const app = express();
@@ -33,6 +33,7 @@ async function run() {
     const requestMealCollection = client.db('dormMasterDB').collection('requestMeals');
     const reviewCollection = client.db('dormMasterDB').collection('reviews');
     const userCollection = client.db('dormMasterDB').collection('users');
+    const planCollection = client.db('dormMasterDB').collection('plans');
 
     //meal related api
 
@@ -42,8 +43,22 @@ async function run() {
       res.send(result);
     });
 
+
     app.get('/meal', async (req, res) => {
-      const result = await mealCollection.find().toArray();
+      const filter = req.query.filter;
+      const search = req.query.search;
+      const minPrice = req.query.minPrice;
+      const maxPrice = req.query.maxPrice;
+
+      let query = {
+        title: { $regex: search, $options: 'i' },
+      }
+      if (filter) query.category = filter
+
+      if (minPrice && maxPrice) {
+        query.price = { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) };
+      }
+      const result = await mealCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -81,43 +96,56 @@ async function run() {
           like: item.like,
           description: item.description
         }
-        }
-    if(item.review)
-      {
-        updateDoc.$inc = {review:1};
+      }
+      if (item.review) {
+        updateDoc.$inc = { review: 1 };
       }
 
       const result = await mealCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
-    app.patch('/reviewCount/:id',async(req,res)=>{
+    app.patch('/reviewCount/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
-      let count = { $inc : { review : 1}};
-      
+      let count = { $inc: { review: 1 } };
+
       const result = await mealCollection.updateOne(filter, count);
       res.send(result);
-      
+
     });
 
-    app.patch('/likeCount/:id',async(req,res)=>{
+    app.patch('/likeCount/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
-      let count = { $inc : { like : 1}};
-      
+      let count = { $inc: { like: 1 } };
+
       const result = await mealCollection.updateOne(filter, count);
       res.send(result);
     })
 
-    app.delete('/meal/:id', async(req,res)=>{
+    app.delete('/meal/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const result = await mealCollection.deleteOne(filter);
       res.send(result);
     });
+
+
+    //plan related api
+    app.get('/plan', async (req, res) => {
+      const result = await planCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get('/plan/:name', async (req, res) => {
+      const name = req.params.name;
+      const filter = { name: name };
+      const result = await planCollection.findOne(filter);
+      res.send(result);
+    })
 
     //review related api
     app.post('/review', async (req, res) => {
@@ -126,11 +154,11 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/review/:id', async(req,res)=>{
+    app.patch('/review/:id', async (req, res) => {
       const data = req.body;
       console.log(data);
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
 
       const updateDoc = {
         $set: {
@@ -138,7 +166,7 @@ async function run() {
         }
       }
 
-      const result = await reviewCollection.updateOne(filter,updateDoc);
+      const result = await reviewCollection.updateOne(filter, updateDoc);
       req.send(result);
     })
 
@@ -154,9 +182,9 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/review/:id', async(req,res)=>{
+    app.delete('/review/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const result = await reviewCollection.deleteOne(filter);
       res.send(result);
     });
@@ -173,16 +201,16 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/upcomingMeal/:id', async(req,res)=>{
+    app.get('/upcomingMeal/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id:  new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const result = await upcomingMealCollection.findOne(filter);
       res.send(result);
     });
 
-    app.delete('/upcomingMeal/:id', async(req,res)=>{
+    app.delete('/upcomingMeal/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const result = await upcomingMealCollection.deleteOne(filter);
       res.send(result);
     });
@@ -199,9 +227,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/mealRequest/:email', async(req,res)=>{
+    app.get('/mealRequest/:email', async (req, res) => {
       const email = req.params.email;
-      const filter = {userEmail:email};
+      const filter = { userEmail: email };
       const result = await requestMealCollection.find(filter).toArray();
       res.send(result);
     })
@@ -221,9 +249,9 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/mealRequest/:id', async(req,res)=>{
+    app.delete('/mealRequest/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const result = await requestMealCollection.deleteOne(filter);
       res.send(result);
     });
@@ -242,20 +270,31 @@ async function run() {
     });
 
     app.get('/users', async (req, res) => {
-      const result = await userCollection.find().toArray();
+
+      //search by user name and email
+      const search = req.query.search;
+
+      let query = {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ]
+      }
+
+      const result = await userCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get('/users/:email', async(req,res)=>{
+    app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
-      const filter = {email:email};
+      const filter = { email: email };
       const user = await userCollection.findOne(filter);
       let admin = false;
 
       if (user) {
         admin = user?.role === 'admin'
       }
-      res.send({admin});
+      res.send({ admin });
     });
 
     app.patch('/users/admin/:id', async (req, res) => {
