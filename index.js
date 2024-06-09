@@ -3,7 +3,9 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 8000;
 
 //middleware
@@ -26,6 +28,32 @@ const client = new MongoClient(uri, {
   }
 });
 
+// const verifyToken = async (req, res, next) => {
+//   const token = req.cookies?.token;
+
+//   console.log('Value of the middleware: ', token);
+
+//   if (!token) {
+//     return res.status(401).send({ message: 'not authorize' })
+//   }
+//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//     //error
+//     if (err) {
+//       console.log(err);
+//       return req.status(401).send({ message: 'unauthorize' })
+//     }
+//     req.user = decoded;
+//     next();
+//   })
+
+// }
+
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production" ? true : false,
+};
+
 async function run() {
   try {
     const mealCollection = client.db('dormMasterDB').collection('meals');
@@ -35,9 +63,47 @@ async function run() {
     const userCollection = client.db('dormMasterDB').collection('users');
     const planCollection = client.db('dormMasterDB').collection('plans');
 
+
+    //jwt api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      res.send({ token });
+    });
+
+    const verifyToken = (req, res, next) => {
+      // console.log('inside verify', req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' })
+      }
+
+      const token = req.headers.authorization.split(' ')[1];
+      // console.log("1",token);
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+
+    //verify admin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === 'admin'
+
+      if (!isAdmin) {
+        res.status(403).send({ message: 'forbidden access' })
+      }
+      next();
+    }
+
     //meal related api
 
-    app.post('/meal', async (req, res) => {
+    app.post('/meal', verifyToken, async (req, res) => {
       const item = req.body;
       const result = await mealCollection.insertOne(item);
       res.send(result);
@@ -69,7 +135,7 @@ async function run() {
     //   res.send(result);
     // });
 
-    app.get('/meal/:id', async (req, res) => {
+    app.get('/meal/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await mealCollection.findOne(query);
@@ -140,7 +206,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/plan/:name', async (req, res) => {
+    app.get('/plan/:name', verifyToken, async (req, res) => {
       const name = req.params.name;
       const filter = { name: name };
       const result = await planCollection.findOne(filter);
@@ -148,13 +214,13 @@ async function run() {
     })
 
     //review related api
-    app.post('/review', async (req, res) => {
+    app.post('/review', verifyToken, async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.send(result);
     });
 
-    app.patch('/review/:id', async (req, res) => {
+    app.patch('/review/:id', verifyToken, async (req, res) => {
       const data = req.body;
       console.log(data);
       const id = req.params.id;
@@ -208,6 +274,16 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/upcomingMealLike/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      let count = { $inc: { like: 1 } };
+
+      const result = await upcomingMealCollection.updateOne(filter, count);
+      res.send(result);
+    })
+
     app.delete('/upcomingMeal/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -216,7 +292,7 @@ async function run() {
     });
 
     //meal request related api
-    app.post('/mealRequest', async (req, res) => {
+    app.post('/mealRequest', verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const result = await requestMealCollection.insertOne(item);
       res.send(result);
@@ -269,10 +345,14 @@ async function run() {
       res.send(result);
     });
 
+    await userCollection.createIndex({ name: 1 });
+
+    // Create index on the email field
+    await userCollection.createIndex({ email: 1 });
     app.get('/users', async (req, res) => {
 
       //search by user name and email
-      const search = req.query.search;
+      const search = req.query.search || '';
 
       let query = {
         $or: [
@@ -280,6 +360,10 @@ async function run() {
           { email: { $regex: search, $options: 'i' } }
         ]
       }
+      // let query = {}
+      // if (query) {
+      //   query = { $text: { $search: search } }
+      // }
 
       const result = await userCollection.find(query).toArray();
       res.send(result);
@@ -317,6 +401,27 @@ async function run() {
 
       const result = await userCollection.deleteOne(filter);
       res.send(result);
+    });
+
+
+    //payment intent
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      console.log(price);
+      const amount = parseInt(price * 100);
+      console.log(amount, 'amount inside the intend');
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: [
+          "card"
+        ],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     });
 
 
