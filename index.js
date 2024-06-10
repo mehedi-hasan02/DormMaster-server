@@ -384,8 +384,6 @@ async function run() {
     });
 
     await userCollection.createIndex({ name: 1 });
-
-    // Create index on the email field
     await userCollection.createIndex({ email: 1 });
     app.get('/users', async (req, res) => {
 
@@ -407,12 +405,23 @@ async function run() {
       const email = req.params.email;
       const filter = { email: email };
       const user = await userCollection.findOne(filter);
+      // let admin = false;
+
+      // if (user) {
+      //   admin = user?.role === 'admin'
+      // }
+      res.send(user);
+    });
+    app.get('/users/admin/:email', async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const user = await userCollection.findOne(filter);
       let admin = false;
 
       if (user) {
         admin = user?.role === 'admin'
       }
-      res.send({ admin });
+      res.send({admin});
     });
 
     app.patch('/users/admin/:id', async (req, res) => {
@@ -426,6 +435,27 @@ async function run() {
       }
 
       const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.patch('/users/:email',async(req,res)=>{
+      const email = req.params.email;
+      const filter = {email: email};
+      const {membership} = req.body;
+      console.log(membership);
+
+      if(!membership)
+        {
+          return res.status(400).send({error: 'Membership data is required'});
+        }
+
+      const updateDoc = {
+        $set: {
+          membership: membership
+        }
+      }
+
+      const result = await userCollection.updateOne(filter,updateDoc);
       res.send(result);
     });
 
