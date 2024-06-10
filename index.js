@@ -62,6 +62,7 @@ async function run() {
     const reviewCollection = client.db('dormMasterDB').collection('reviews');
     const userCollection = client.db('dormMasterDB').collection('users');
     const planCollection = client.db('dormMasterDB').collection('plans');
+    const paymentCollection = client.db('dormMasterDB').collection('payments');
 
 
     //jwt api
@@ -113,6 +114,7 @@ async function run() {
     app.get('/meal', async (req, res) => {
       const filter = req.query.filter;
       const search = req.query.search;
+      console.log(search);
       const minPrice = req.query.minPrice;
       const maxPrice = req.query.maxPrice;
 
@@ -248,6 +250,26 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/reviewLike/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { mealId: id };
+      console.log(filter);
+
+      let count = { $inc: { like: 1 } };
+      const result = await reviewCollection.updateMany(filter, count);
+      res.send(result);
+    });
+
+    app.patch('/reviewReview/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { mealId: id };
+
+      const count = { $inc: { reviewCount: 1 } };
+      const result = await reviewCollection.updateMany(filter, count);
+      res.send(result);
+    });
+
     app.delete('/review/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -263,7 +285,12 @@ async function run() {
     });
 
     app.get('/upcomingMeal', async (req, res) => {
-      const result = await upcomingMealCollection.find().toArray();
+      const filter = req.query.filter || {};
+
+      const sortBy = req.query.sortBy || 'like';
+      const order = parseInt(req.query.order) || -1;
+      const result = await upcomingMealCollection.find(filter).sort({ [sortBy]: order }).toArray();
+      // const result = await upcomingMealCollection.find().toArray();
       res.send(result);
     });
 
@@ -298,8 +325,19 @@ async function run() {
       res.send(result);
     });
 
+    await requestMealCollection.createIndex({ userName: 1 });
+    await requestMealCollection.createIndex({ userEmail: 1 });
     app.get('/mealRequest', async (req, res) => {
-      const result = await requestMealCollection.find().toArray();
+
+      const search = req.query.search;
+
+      let query = {
+        $or: [
+          { userName: { $regex: search, $options: 'i' } },
+          { userEmail: { $regex: search, $options: 'i' } }
+        ]
+      }
+      const result = await requestMealCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -360,10 +398,6 @@ async function run() {
           { email: { $regex: search, $options: 'i' } }
         ]
       }
-      // let query = {}
-      // if (query) {
-      //   query = { $text: { $search: search } }
-      // }
 
       const result = await userCollection.find(query).toArray();
       res.send(result);
@@ -407,9 +441,9 @@ async function run() {
     //payment intent
     app.post('/create-payment-intent', async (req, res) => {
       const { price } = req.body;
-      console.log(price);
+      // console.log(price);
       const amount = parseInt(price * 100);
-      console.log(amount, 'amount inside the intend');
+      // console.log(amount, 'amount inside the intend');
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -423,6 +457,19 @@ async function run() {
         clientSecret: paymentIntent.client_secret
       })
     });
+
+    app.post('/payment', async (req, res) => {
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+
+    app.get('/payment/:email', async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await paymentCollection.find(filter).toArray();
+      res.send(result);
+    })
 
 
 
