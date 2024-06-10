@@ -104,7 +104,7 @@ async function run() {
 
     //meal related api
 
-    app.post('/meal', verifyToken, async (req, res) => {
+    app.post('/meal', verifyToken,verifyAdmin, async (req, res) => {
       const item = req.body;
       const result = await mealCollection.insertOne(item);
       res.send(result);
@@ -130,12 +130,6 @@ async function run() {
       res.send(result);
     });
 
-    // app.get('/meal/:email', async (req, res) => {
-    //   const adminEmail = req.params.email;
-    //   const filter = { adminEmail: adminEmail };
-    //   const result = await mealCollection.find(filter).toArray();
-    //   res.send(result);
-    // });
 
     app.get('/meal/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
@@ -146,7 +140,7 @@ async function run() {
 
 
 
-    app.patch('/meal/:id', async (req, res) => {
+    app.patch('/meal/:id',verifyToken,verifyAdmin, async (req, res) => {
       const item = req.body;
       console.log(item);
       const id = req.params.id;
@@ -173,7 +167,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/reviewCount/:id', async (req, res) => {
+    app.patch('/reviewCount/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -184,7 +178,7 @@ async function run() {
 
     });
 
-    app.patch('/likeCount/:id', async (req, res) => {
+    app.patch('/likeCount/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -194,7 +188,7 @@ async function run() {
       res.send(result);
     })
 
-    app.delete('/meal/:id', async (req, res) => {
+    app.delete('/meal/:id',verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await mealCollection.deleteOne(filter);
@@ -238,19 +232,19 @@ async function run() {
       req.send(result);
     })
 
-    app.get('/reviews', async (req, res) => {
+    app.get('/reviews',verifyToken, async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     })
 
-    app.get('/review/:id', async (req, res) => {
+    app.get('/review/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { mealId: id };
       const result = await reviewCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.patch('/reviewLike/:id', async (req, res) => {
+    app.patch('/reviewLike/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       console.log(id);
       const filter = { mealId: id };
@@ -261,7 +255,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/reviewReview/:id', async (req, res) => {
+    app.patch('/reviewReview/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { mealId: id };
 
@@ -270,7 +264,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/review/:id', async (req, res) => {
+    app.delete('/review/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await reviewCollection.deleteOne(filter);
@@ -301,7 +295,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/upcomingMealLike/:id', async (req, res) => {
+    app.patch('/upcomingMealLike/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -311,7 +305,7 @@ async function run() {
       res.send(result);
     })
 
-    app.delete('/upcomingMeal/:id', async (req, res) => {
+    app.delete('/upcomingMeal/:id',verifyToken,verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await upcomingMealCollection.deleteOne(filter);
@@ -319,7 +313,7 @@ async function run() {
     });
 
     //meal request related api
-    app.post('/mealRequest', verifyToken, verifyAdmin, async (req, res) => {
+    app.post('/mealRequest', verifyToken, async (req, res) => {
       const item = req.body;
       const result = await requestMealCollection.insertOne(item);
       res.send(result);
@@ -327,7 +321,8 @@ async function run() {
 
     await requestMealCollection.createIndex({ userName: 1 });
     await requestMealCollection.createIndex({ userEmail: 1 });
-    app.get('/mealRequest', async (req, res) => {
+
+    app.get('/mealRequest',verifyToken, async (req, res) => {
 
       const search = req.query.search;
 
@@ -341,14 +336,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/mealRequest/:email', async (req, res) => {
+    app.get('/mealRequest/:email',verifyToken, async (req, res) => {
       const email = req.params.email;
       const filter = { userEmail: email };
       const result = await requestMealCollection.find(filter).toArray();
       res.send(result);
     })
 
-    app.patch('/mealRequest/:id', async (req, res) => {
+    app.patch('/mealRequest/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const data = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -363,7 +358,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/mealRequest/:id', async (req, res) => {
+    app.delete('/mealRequest/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await requestMealCollection.deleteOne(filter);
@@ -385,7 +380,7 @@ async function run() {
 
     await userCollection.createIndex({ name: 1 });
     await userCollection.createIndex({ email: 1 });
-    app.get('/users', async (req, res) => {
+    app.get('/users',verifyToken, async (req, res) => {
 
       //search by user name and email
       const search = req.query.search || '';
@@ -401,18 +396,13 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/users/:email', async (req, res) => {
+    app.get('/users/:email',verifyToken, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await userCollection.findOne(filter);
-      // let admin = false;
-
-      // if (user) {
-      //   admin = user?.role === 'admin'
-      // }
       res.send(user);
     });
-    app.get('/users/admin/:email', async (req, res) => {
+    app.get('/users/admin/:email',verifyToken,verifyAdmin, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const user = await userCollection.findOne(filter);
@@ -424,7 +414,7 @@ async function run() {
       res.send({admin});
     });
 
-    app.patch('/users/admin/:id', async (req, res) => {
+    app.patch('/users/admin/:id',verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -438,7 +428,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/users/:email',async(req,res)=>{
+    app.patch('/users/:email',verifyToken, async(req,res)=>{
       const email = req.params.email;
       const filter = {email: email};
       const {membership} = req.body;
@@ -459,7 +449,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/users/:id', async (req, res) => {
+    app.delete('/users/:id',verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -488,13 +478,13 @@ async function run() {
       })
     });
 
-    app.post('/payment', async (req, res) => {
+    app.post('/payment',verifyToken, async (req, res) => {
       const payment = req.body;
       const result = await paymentCollection.insertOne(payment);
       res.send(result);
     });
 
-    app.get('/payment/:email', async (req, res) => {
+    app.get('/payment/:email',verifyToken, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const result = await paymentCollection.find(filter).toArray();
